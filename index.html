@@ -321,7 +321,7 @@ body {
 
         <!-- Action Buttons -->
         <div class="actions">
-            <button class="btn btn-primary" onclick="speak(lastWord)">
+            <button class="btn btn-primary" onclick="replaySpeech()">
                 <i class="fa-solid fa-play"></i>
                 إعادة النطق
             </button>
@@ -518,6 +518,11 @@ document.addEventListener('touchmove', function(e) {
     }
 }, { passive: false });
 
+      function replaySpeech() {
+    if (window.AppInventor) {
+        window.AppInventor.setWebViewString("REPLAY");
+    }
+}
 </script>
 
 </body>
