@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata,Viewport } from "next";
 import { Cairo } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
@@ -8,6 +8,12 @@ const cairo = Cairo({
   subsets: ["arabic"],
 });
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
 export const metadata: Metadata = {
   title: "Life Sense",
   description: "ترجمة لغة الإشارة إلى صوت ونص",
