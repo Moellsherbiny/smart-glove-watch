@@ -19,7 +19,6 @@ declare global {
 
 const HISTORY_LIMIT = 5;
 export default function HomePage() {
-
   const [gesture, setGesture] = useState("في انتظار الإشارة...");
 
   const [history, setHistory] = useState<string[]>([]);
@@ -31,29 +30,30 @@ export default function HomePage() {
   const [isSpeaking, setIsSpeaking] = useState(false);
 
   const lastWordRef = useRef("");
-
+  const isAppInventor = () => {
+    return typeof window !== "undefined" && !!window.AppInventor;
+  };
   const storage = {
-  get(key: string) {
-    try {
-      return localStorage.getItem(key);
-    } catch {
-      return null;
-    }
-  },
+    get(key: string) {
+      try {
+        return localStorage.getItem(key);
+      } catch {
+        return null;
+      }
+    },
 
-  set(key: string, value: string) {
-    try {
-      localStorage.setItem(key, value);
-    } catch {}
-  },
+    set(key: string, value: string) {
+      try {
+        localStorage.setItem(key, value);
+      } catch {}
+    },
 
-  remove(key: string) {
-    try {
-      localStorage.removeItem(key);
-    } catch {}
-  },
-};
-
+    remove(key: string) {
+      try {
+        localStorage.removeItem(key);
+      } catch {}
+    },
+  };
 
   const sendToAppInventor = (message: string) => {
     if (typeof window !== "undefined" && window.AppInventor) {
@@ -68,20 +68,22 @@ export default function HomePage() {
 
     window.speechSynthesis.cancel();
 
-    const utterance = new SpeechSynthesisUtterance(text);
+    setTimeout(() => {
+      const utterance = new SpeechSynthesisUtterance(text);
 
-    utterance.lang = "en-US";
-    utterance.rate = 0.9;
-    utterance.pitch = 1;
-    utterance.volume = 1;
+      utterance.lang = "en-US";
+      utterance.rate = 0.9;
+      utterance.pitch = 1;
+      utterance.volume = 1;
 
-    utterance.onstart = () => setIsSpeaking(true);
+      utterance.onstart = () => setIsSpeaking(true);
 
-    utterance.onend = () => setIsSpeaking(false);
+      utterance.onend = () => setIsSpeaking(false);
 
-    utterance.onerror = () => setIsSpeaking(false);
+      utterance.onerror = () => setIsSpeaking(false);
 
-    window.speechSynthesis.speak(utterance);
+      window.speechSynthesis.speak(utterance);
+    }, 100);
   };
 
   useEffect(() => {
@@ -153,7 +155,11 @@ export default function HomePage() {
         navigator.vibrate(150);
       }
 
-      speak(value);
+      if (isAppInventor()) {
+        sendToAppInventor(value);
+      } else {
+        speak(value);
+      }
     });
 
     return () => {
@@ -240,7 +246,7 @@ export default function HomePage() {
 
             {/* Current Gesture */}
             <div className="min-h-30 flex items-center justify-center">
-             <h2 className="text-5xl font-black text-center wrap-break-word leading-relaxed">
+              <h2 className="text-5xl font-black text-center wrap-break-word leading-relaxed">
                 {gesture}
               </h2>
             </div>
@@ -250,20 +256,18 @@ export default function HomePage() {
               <Button
                 size="lg"
                 onClick={() => {
-                  speak(gesture);
-
-                  sendToAppInventor(`REPLAY_${Date.now()}`);
+                  if (isAppInventor()) {
+                    sendToAppInventor("REPLAY");
+                  } else {
+                    speak(gesture);
+                  }
                 }}
               >
                 <Play className="w-4 h-4 ml-2" />
                 إعادة النطق
               </Button>
 
-              <Button
-                size="lg"
-                variant="outline"
-                onClick={clearHistory}
-              >
+              <Button size="lg" variant="outline" onClick={clearHistory}>
                 <Trash2 className="w-4 h-4 ml-2" />
                 مسح السجل
               </Button>
