@@ -39,7 +39,7 @@ export function BottomNavbar() {
           const active = pathname === item.href;
 
           return (
-            <Link
+            <a
               key={item.href}
               href={item.href}
               className={`flex flex-col items-center gap-1 text-xs ${
@@ -50,7 +50,7 @@ export function BottomNavbar() {
             >
               <Icon size={22} />
               <span>{item.label}</span>
-            </Link>
+            </a>
           );
         })}
       </div>
