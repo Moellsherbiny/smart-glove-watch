@@ -3,6 +3,7 @@ import { Cairo } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { BottomNavbar } from "@/components/bottom-navbar";
+import {Toaster} from "@/components/ui/sonner";
 const cairo = Cairo({
   subsets: ["arabic"],
 });
@@ -34,6 +35,7 @@ export default function RootLayout({
           {children}
 
           <BottomNavbar />
+          <Toaster position="top-center" />
         </div>
       </body>
     </html>

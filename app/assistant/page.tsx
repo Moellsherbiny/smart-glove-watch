@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Bot, SendHorizontal } from "lucide-react";
+import { Bot, Loader2, SendHorizontal } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { useEffect, useRef } from "react";
 type Message = {
   id: number;
   role: "user" | "assistant";
@@ -18,6 +19,7 @@ type Message = {
 export default function AssistantPage() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const bottomRef = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
@@ -26,6 +28,11 @@ export default function AssistantPage() {
     },
   ]);
 
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({
+      behavior: "smooth",
+    });
+  }, [messages, loading]);
   const sendMessage = async () => {
     if (!input.trim()) return;
 
@@ -100,7 +107,10 @@ export default function AssistantPage() {
 
       {/* Messages */}
       <ScrollArea className="flex-1">
-        <div className="mx-auto max-w-md px-4 py-6 space-y-4 text-right">
+        <div
+          ref={bottomRef}
+          className="mx-auto max-w-md px-4 py-6 space-y-4 text-right"
+        >
           {messages.map((message) => (
             <div
               key={message.id}
@@ -112,9 +122,9 @@ export default function AssistantPage() {
                 className={`max-w-[85%] rounded-[24px] px-4 py-3 text-[15px]
 leading-8
 tracking-wide shadow-md ${
-                  message.role === "user"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted"
+                  message.role === "assistant"
+                    ? "bg-muted border"
+                    : "bg-primary text-primary-foreground"
                 }`}
               >
                 <ReactMarkdown
@@ -140,58 +150,30 @@ tracking-wide shadow-md ${
                 >
                   {message.content}
                 </ReactMarkdown>
-
-                {loading && (
-                  <div className="flex justify-end">
-                    <div className="bg-muted rounded-[24px] px-5 py-4">
-                      <div className="flex gap-1">
-                        <div className="size-2 rounded-full bg-muted-foreground animate-bounce" />
-                        <div
-                          className="size-2 rounded-full bg-muted-foreground animate-bounce"
-                          style={{ animationDelay: "150ms" }}
-                        />
-                        <div
-                          className="size-2 rounded-full bg-muted-foreground animate-bounce"
-                          style={{ animationDelay: "300ms" }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           ))}
+          {loading && (
+            <div className="flex justify-end">
+              <div className="bg-muted rounded-[24px] px-5 py-4">
+                <div className="flex gap-1">
+                  <div className="size-2 rounded-full bg-muted-foreground animate-bounce" />
+                  <div
+                    className="size-2 rounded-full bg-muted-foreground animate-bounce"
+                    style={{ animationDelay: "150ms" }}
+                  />
+                  <div
+                    className="size-2 rounded-full bg-muted-foreground animate-bounce"
+                    style={{ animationDelay: "300ms" }}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </ScrollArea>
 
-      {/* Suggestions */}
-      <div className="px-4 pb-3">
-        <div className="flex gap-2 overflow-x-auto no-scrollbar">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setInput("أحتاج مساعدة")}
-          >
-            أحتاج مساعدة
-          </Button>
 
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setInput("كيف أستخدم التطبيق؟")}
-          >
-            كيفية الاستخدام
-          </Button>
-
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setInput("التواصل مع العائلة")}
-          >
-            التواصل مع العائلة
-          </Button>
-        </div>
-      </div>
 
       {/* Input */}
       <div className="border-t bg-background">
@@ -200,6 +182,7 @@ tracking-wide shadow-md ${
             <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}
+              disabled={loading}
               placeholder="اكتب رسالتك..."
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
@@ -208,8 +191,17 @@ tracking-wide shadow-md ${
               }}
             />
 
-            <Button size="icon" onClick={sendMessage}>
-              <SendHorizontal className="size-4" />
+            <Button
+              size="icon"
+              onClick={sendMessage}
+              disabled={loading || !input.trim()}
+            >
+             {
+              loading ? (
+               <Loader2 className="size-4 animate-spin" />
+              ) : (
+              <SendHorizontal className="size-4" />)
+             }
             </Button>
           </div>
         </div>
