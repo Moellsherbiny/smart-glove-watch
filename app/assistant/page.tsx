@@ -27,105 +27,36 @@ type Message = {
   content: string;
 };
 
-const STORAGE_KEY = "lifesense_chat";
-
 export default function AssistantPage() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
-
-  const storage = {
-    get(key: string) {
-      try {
-        return localStorage.getItem(key);
-      } catch {
-        return null;
-      }
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: 1,
+      role: "assistant",
+      content: "مرحباً 👋 كيف يمكنني مساعدتك اليوم؟",
     },
-
-    set(key: string, value: string) {
-      try {
-        localStorage.setItem(key, value);
-      } catch {}
-    },
-
-    remove(key: string) {
-      try {
-        localStorage.removeItem(key);
-      } catch {}
-    },
-  };
-  useEffect(() => {
-    const saved = storage.get(STORAGE_KEY);
-
-    if (saved) {
-      try {
-        setMessages(JSON.parse(saved));
-      } catch {
-        storage.remove(STORAGE_KEY);
-
-        setMessages([
-          {
-            id: 1,
-            role: "assistant",
-            content: "مرحباً 👋 كيف يمكنني مساعدتك اليوم؟",
-          },
-        ]);
-      }
-    } else {
-      setMessages([
-        {
-          id: 1,
-          role: "assistant",
-          content: "مرحباً 👋 كيف يمكنني مساعدتك اليوم؟",
-        },
-      ]);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (messages.length) {
-      storage.set(STORAGE_KEY, JSON.stringify(messages));
-    }
-  }, [messages]);
+  ]);
 
   const sendMessage = async () => {
     if (loading) return;
     if (!input.trim()) return;
 
     const userMessage = input;
+    const userMessageObject: Message = {
+      id: Date.now(),
+      role: "user",
+      content: userMessage,
+    };
 
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: Date.now(),
-        role: "user",
-        content: userMessage,
-      },
-    ]);
+    setMessages((prev) => [...prev, userMessageObject]);
 
     setInput("");
 
     setLoading(true);
 
-    const currentHistory =
-      messages.length > 0
-        ? [
-            ...messages,
-            {
-              id: Date.now(),
-              role: "user",
-              content: userMessage,
-            },
-          ]
-        : [
-            {
-              id: Date.now(),
-              role: "user",
-              content: userMessage,
-            },
-          ];
+    const currentHistory = [...messages, userMessageObject];
     try {
       const response = await fetch("/api/chat", {
         method: "POST",
@@ -162,7 +93,7 @@ export default function AssistantPage() {
     }
   };
 
-  const prevLength = useRef(0);
+  const prevLength = useRef(messages.length);
 
   useEffect(() => {
     if (messages.length > prevLength.current) {
@@ -174,8 +105,6 @@ export default function AssistantPage() {
     prevLength.current = messages.length;
   }, [messages]);
   const clearChat = () => {
-    storage.remove(STORAGE_KEY);
-
     setMessages([
       {
         id: 1,
@@ -186,9 +115,19 @@ export default function AssistantPage() {
   };
 
   const deleteMessage = (id: number) => {
-    if (id === 1) return;
+    setMessages((prev) => {
+      const updated = prev.filter((message) => message.id !== id);
 
-    setMessages((prev) => prev.filter((message) => message.id !== id));
+      return updated.length
+        ? updated
+        : [
+            {
+              id: 1,
+              role: "assistant",
+              content: "مرحباً 👋 كيف يمكنني مساعدتك اليوم؟",
+            },
+          ];
+    });
   };
   return (
     <main className="flex h-dvh flex-col bg-background">
@@ -246,37 +185,39 @@ export default function AssistantPage() {
               }`}
             >
               <div className="flex items-center gap-2">
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="size-8 shrink-0 text-muted-foreground"
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </AlertDialogTrigger>
-
-                  <AlertDialogContent dir="rtl">
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>حذف الرسالة؟</AlertDialogTitle>
-
-                      <AlertDialogDescription>
-                        سيتم حذف هذه الرسالة نهائياً.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>إلغاء</AlertDialogCancel>
-
-                      <AlertDialogAction
-                        onClick={() => deleteMessage(message.id)}
+                {message.role === "user" && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="size-8 shrink-0 text-muted-foreground"
                       >
-                        حذف
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+
+                    <AlertDialogContent dir="rtl">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>حذف الرسالة؟</AlertDialogTitle>
+
+                        <AlertDialogDescription>
+                          سيتم حذف هذه الرسالة نهائياً.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>إلغاء</AlertDialogCancel>
+
+                        <AlertDialogAction
+                          onClick={() => deleteMessage(message.id)}
+                        >
+                          حذف
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
                 <div
                   className={`max-w-[90%] rounded-2xl px-4 py-3 text-[15px]
 leading-8
