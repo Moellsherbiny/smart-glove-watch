@@ -35,7 +35,7 @@ export default function AssistantPage() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<Message[]>([]);
 
-    const storage = {
+  const storage = {
     get(key: string) {
       try {
         return localStorage.getItem(key);
@@ -60,7 +60,19 @@ export default function AssistantPage() {
     const saved = storage.get(STORAGE_KEY);
 
     if (saved) {
-      setMessages(JSON.parse(saved));
+      try {
+        setMessages(JSON.parse(saved));
+      } catch {
+        storage.remove(STORAGE_KEY);
+
+        setMessages([
+          {
+            id: 1,
+            role: "assistant",
+            content: "مرحباً 👋 كيف يمكنني مساعدتك اليوم؟",
+          },
+        ]);
+      }
     } else {
       setMessages([
         {
@@ -78,8 +90,8 @@ export default function AssistantPage() {
     }
   }, [messages]);
 
-
   const sendMessage = async () => {
+    if (loading) return;
     if (!input.trim()) return;
 
     const userMessage = input;
@@ -96,6 +108,24 @@ export default function AssistantPage() {
     setInput("");
 
     setLoading(true);
+
+    const currentHistory =
+      messages.length > 0
+        ? [
+            ...messages,
+            {
+              id: Date.now(),
+              role: "user",
+              content: userMessage,
+            },
+          ]
+        : [
+            {
+              id: Date.now(),
+              role: "user",
+              content: userMessage,
+            },
+          ];
     try {
       const response = await fetch("/api/chat", {
         method: "POST",
@@ -104,7 +134,7 @@ export default function AssistantPage() {
         },
         body: JSON.stringify({
           message: userMessage,
-           history: messages,
+          history: currentHistory,
         }),
       });
 
@@ -134,15 +164,15 @@ export default function AssistantPage() {
 
   const prevLength = useRef(0);
 
-useEffect(() => {
-  if (messages.length > prevLength.current) {
-    bottomRef.current?.scrollIntoView({
-      behavior: "smooth",
-    });
-  }
+  useEffect(() => {
+    if (messages.length > prevLength.current) {
+      bottomRef.current?.scrollIntoView({
+        behavior: "smooth",
+      });
+    }
 
-  prevLength.current = messages.length;
-}, [messages]);
+    prevLength.current = messages.length;
+  }, [messages]);
   const clearChat = () => {
     storage.remove(STORAGE_KEY);
 
@@ -156,6 +186,8 @@ useEffect(() => {
   };
 
   const deleteMessage = (id: number) => {
+    if (id === 1) return;
+
     setMessages((prev) => prev.filter((message) => message.id !== id));
   };
   return (
