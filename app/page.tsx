@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Hand, Volume2, Wifi, Play, Trash2 } from "lucide-react";
 import { ref, onValue } from "firebase/database";
 
@@ -17,15 +17,21 @@ declare global {
   }
 }
 
+const HISTORY_LIMIT = 5;
 export default function HomePage() {
+
   const [gesture, setGesture] = useState("في انتظار الإشارة...");
+
   const [history, setHistory] = useState<string[]>([]);
+
   const [connected, setConnected] = useState(false);
+
   const [lastUpdate, setLastUpdate] = useState("");
-  const [lastWord, setLastWord] = useState("");
+
   const [isSpeaking, setIsSpeaking] = useState(false);
 
-  
+  const lastWordRef = useRef("");
+
   const sendToAppInventor = (message: string) => {
     if (typeof window !== "undefined" && window.AppInventor) {
       window.AppInventor.setWebViewString(message);
@@ -33,7 +39,9 @@ export default function HomePage() {
   };
 
   const speak = (text: string) => {
-    if (!text || text === "في انتظار الإشارة...") return;
+    if (!text || text === "في انتظار الإشارة...") {
+      return;
+    }
 
     window.speechSynthesis.cancel();
 
@@ -44,20 +52,38 @@ export default function HomePage() {
     utterance.pitch = 1;
     utterance.volume = 1;
 
-    utterance.onstart = () => {
-      setIsSpeaking(true);
-    };
+    utterance.onstart = () => setIsSpeaking(true);
 
-    utterance.onend = () => {
-      setIsSpeaking(false);
-    };
+    utterance.onend = () => setIsSpeaking(false);
 
-    utterance.onerror = () => {
-      setIsSpeaking(false);
-    };
+    utterance.onerror = () => setIsSpeaking(false);
 
     window.speechSynthesis.speak(utterance);
   };
+
+  useEffect(() => {
+    const savedHistory = localStorage.getItem("lifesense-history");
+
+    const savedGesture = localStorage.getItem("last-gesture");
+
+    const savedUpdate = localStorage.getItem("last-update");
+
+    if (savedHistory) {
+      setHistory(JSON.parse(savedHistory));
+    }
+
+    if (savedGesture) {
+      setGesture(savedGesture);
+    }
+
+    if (savedUpdate) {
+      setLastUpdate(savedUpdate);
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("lifesense-history", JSON.stringify(history));
+  }, [history]);
 
   useEffect(() => {
     const connectionRef = ref(db, ".info/connected");
@@ -72,45 +98,70 @@ export default function HomePage() {
       const value = snapshot.val();
 
       if (
-        value &&
-        typeof value === "string" &&
-        value.trim() !== "" &&
-        value !== lastWord
+        !value ||
+        typeof value !== "string" ||
+        value.trim() === "" ||
+        value === lastWordRef.current
       ) {
-        setLastWord(value);
-        setGesture(value);
-
-        sendToAppInventor(value);
-
-        setHistory((prev) => {
-          if (prev[0] === value) return prev;
-
-          const updated = [value, ...prev];
-
-          return updated.slice(0, 5);
-        });
-
-        setLastUpdate(
-          new Date().toLocaleTimeString("ar-EG")
-        );
-
-        if (navigator.vibrate) {
-          navigator.vibrate(150);
-        }
-
-        speak(value);
+        return;
       }
+
+      lastWordRef.current = value;
+
+      setGesture(value);
+
+      localStorage.setItem("last-gesture", value);
+
+      sendToAppInventor(value);
+
+      setHistory((prev) => {
+        const updated = [value, ...prev.filter((item) => item !== value)];
+
+        return updated.slice(0, HISTORY_LIMIT);
+      });
+
+      const updateTime = new Date().toLocaleTimeString("ar-EG");
+
+      setLastUpdate(updateTime);
+
+      localStorage.setItem("last-update", updateTime);
+
+      if (navigator.vibrate) {
+        navigator.vibrate(150);
+      }
+
+      speak(value);
     });
 
     return () => {
       unsubscribeConnection();
       unsubscribeSign();
     };
-  }, [lastWord]);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      window.speechSynthesis.cancel();
+    };
+  }, []);
+
+  const clearHistory = () => {
+    setHistory([]);
+
+    setGesture("في انتظار الإشارة...");
+
+    setLastUpdate("");
+
+    localStorage.removeItem("lifesense-history");
+
+    localStorage.removeItem("last-gesture");
+
+    localStorage.removeItem("last-update");
+  };
 
   return (
-<main className="h-screen bg-linear-to-b from-blue-50 to-slate-100 overflow-hidden">
-  <div className="h-full w-full bg-white p-5 overflow-y-auto no-scrollbar pb-24">
+    <main className="h-screen bg-linear-to-b from-blue-50 to-slate-100 overflow-hidden">
+      <div className="h-full w-full bg-white p-5 overflow-y-auto no-scrollbar pb-24">
         {/* Header */}
         <div className="flex items-center gap-4 mb-5">
           <div className="w-14 h-14 rounded-[20px] bg-linear-to-br from-blue-600 to-cyan-500 flex items-center justify-center text-white shadow-lg">
@@ -118,9 +169,7 @@ export default function HomePage() {
           </div>
 
           <div>
-            <h1 className="text-2xl font-extrabold">
-              Life Sense
-            </h1>
+            <h1 className="text-2xl font-extrabold">Life Sense</h1>
 
             <p className="text-sm text-muted-foreground">
               ترجمة لغة الإشارة إلى صوت ونص
@@ -132,21 +181,15 @@ export default function HomePage() {
         <Card className="mb-5">
           <CardContent className="flex items-center justify-between p-4">
             <div className="flex items-center gap-3">
-
               <div
                 className={`w-3 h-3 rounded-full ${
-                  connected
-                    ? "bg-green-500"
-                    : "bg-amber-500 animate-pulse"
+                  connected ? "bg-green-500" : "bg-amber-500 animate-pulse"
                 }`}
               />
 
               <span className="font-bold text-sm">
-                {connected
-                  ? "متصل بقاعدة البيانات"
-                  : "غير متصل"}
+                {connected ? "متصل بقاعدة البيانات" : "غير متصل"}
               </span>
-
             </div>
 
             <Wifi className="w-5 h-5" />
@@ -156,14 +199,11 @@ export default function HomePage() {
         {/* Main Card */}
         <Card className="rounded-[32px]">
           <CardContent className="p-6">
-
             {/* Voice Circle */}
             <div className="flex justify-center mb-5">
               <div
                 className={`w-24 h-24 rounded-[30px] bg-linear-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white shadow-xl transition-all duration-300 ${
-                  isSpeaking
-                    ? "scale-105 shadow-2xl"
-                    : ""
+                  isSpeaking ? "scale-105 shadow-2xl" : ""
                 }`}
               >
                 <Volume2 className="w-10 h-10" />
@@ -177,17 +217,18 @@ export default function HomePage() {
 
             {/* Current Gesture */}
             <div className="min-h-30 flex items-center justify-center">
-              <h2 className="text-4xl font-extrabold text-center wrap-break-word">
+             <h2 className="text-5xl font-black text-center wrap-break-word leading-relaxed">
                 {gesture}
               </h2>
             </div>
 
             {/* Actions */}
             <div className="grid grid-cols-2 gap-3 mt-6">
-
               <Button
                 size="lg"
                 onClick={() => {
+                  speak(gesture);
+
                   sendToAppInventor("REPLAY");
                 }}
               >
@@ -198,19 +239,16 @@ export default function HomePage() {
               <Button
                 size="lg"
                 variant="outline"
-                onClick={() => setHistory([])}
+                onClick={clearHistory}
               >
                 <Trash2 className="w-4 h-4 ml-2" />
                 مسح السجل
               </Button>
-
             </div>
 
             {/* History */}
             <div className="mt-6">
-              <h3 className="font-extrabold text-sm mb-3">
-                آخر الكلمات
-              </h3>
+              <h3 className="font-extrabold text-sm mb-3">آخر الكلمات</h3>
 
               <div className="flex flex-wrap gap-2">
                 {history.map((item, index) => (
@@ -223,7 +261,6 @@ export default function HomePage() {
                 ))}
               </div>
             </div>
-
           </CardContent>
         </Card>
 
@@ -233,7 +270,6 @@ export default function HomePage() {
             ? `آخر تحديث: ${lastUpdate}`
             : "لم يتم استقبال أي بيانات بعد"}
         </div>
-
       </div>
     </main>
   );
