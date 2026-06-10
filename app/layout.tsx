@@ -26,7 +26,8 @@ export default function RootLayout({
       dir="rtl"
       suppressHydrationWarning
       className={cn(
-        "h-full overflow-hidden antialiased",
+        "h-full antialiased",
+        "no-scrollbar",
         cairo.className
       )}
     >
