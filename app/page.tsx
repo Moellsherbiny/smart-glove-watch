@@ -32,6 +32,29 @@ export default function HomePage() {
 
   const lastWordRef = useRef("");
 
+  const storage = {
+  get(key: string) {
+    try {
+      return localStorage.getItem(key);
+    } catch {
+      return null;
+    }
+  },
+
+  set(key: string, value: string) {
+    try {
+      localStorage.setItem(key, value);
+    } catch {}
+  },
+
+  remove(key: string) {
+    try {
+      localStorage.removeItem(key);
+    } catch {}
+  },
+};
+
+
   const sendToAppInventor = (message: string) => {
     if (typeof window !== "undefined" && window.AppInventor) {
       window.AppInventor.setWebViewString(message);
@@ -62,11 +85,11 @@ export default function HomePage() {
   };
 
   useEffect(() => {
-    const savedHistory = localStorage.getItem("lifesense-history");
+    const savedHistory = storage.get("lifesense-history");
 
-    const savedGesture = localStorage.getItem("last-gesture");
+    const savedGesture = storage.get("last-gesture");
 
-    const savedUpdate = localStorage.getItem("last-update");
+    const savedUpdate = storage.get("last-update");
 
     if (savedHistory) {
       setHistory(JSON.parse(savedHistory));
@@ -82,7 +105,7 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem("lifesense-history", JSON.stringify(history));
+    storage.set("lifesense-history", JSON.stringify(history));
   }, [history]);
 
   useEffect(() => {
@@ -110,7 +133,7 @@ export default function HomePage() {
 
       setGesture(value);
 
-      localStorage.setItem("last-gesture", value);
+      storage.set("last-gesture", value);
 
       sendToAppInventor(value);
 
@@ -124,7 +147,7 @@ export default function HomePage() {
 
       setLastUpdate(updateTime);
 
-      localStorage.setItem("last-update", updateTime);
+      storage.set("last-update", updateTime);
 
       if (navigator.vibrate) {
         navigator.vibrate(150);
@@ -152,11 +175,11 @@ export default function HomePage() {
 
     setLastUpdate("");
 
-    localStorage.removeItem("lifesense-history");
+    storage.remove("lifesense-history");
 
-    localStorage.removeItem("last-gesture");
+    storage.remove("last-gesture");
 
-    localStorage.removeItem("last-update");
+    storage.remove("last-update");
   };
 
   return (

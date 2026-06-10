@@ -12,14 +12,30 @@ export default function EmergencyPage() {
   const [status, setStatus] = useState("");
 
   const getLocation = async () => {
-    return new Promise<string>((resolve, reject) => {
-      navigator.geolocation.getCurrentPosition((position) => {
-        const url = `https://maps.google.com/?q=${position.coords.latitude},${position.coords.longitude}`;
+    return new Promise<string | null>((resolve) => {
+      if (!navigator.geolocation) {
+        resolve(null);
+        return;
+      }
 
-        setLocation(url);
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const url = `https://maps.google.com/?q=${position.coords.latitude},${position.coords.longitude}`;
 
-        resolve(url);
-      }, reject);
+          setLocation(url);
+
+          resolve(url);
+        },
+        () => {
+          toast.warning("تعذر تحديد الموقع، سيتم إرسال الطلب بدون موقع");
+
+          resolve(null);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+        },
+      );
     });
   };
 
@@ -52,7 +68,7 @@ export default function EmergencyPage() {
       toast.success("تم إرسال طلب المساعدة بنجاح");
     } catch {
       setStatus("error");
-      toast.error("تعذر إرسال الطلب");  
+      toast.error("تعذر إرسال الطلب");
     } finally {
       setLoading(false);
     }
@@ -99,7 +115,6 @@ export default function EmergencyPage() {
             )}
           </CardContent>
         </Card>
-
 
         {status === "success" && (
           <Card className="border-green-500">

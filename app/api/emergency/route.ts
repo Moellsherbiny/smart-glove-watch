@@ -2,38 +2,84 @@ import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
+    const { message, location, timestamp } =
+      await req.json();
 
-    const message = `
+    const telegramMessage = `
 🚨 طلب مساعدة جديد
 
-${body.message}
+📝 الرسالة:
+${message}
 
-📍 الموقع:
-${body.location}
+${
+  location &&
+  location !== "الموقع غير متاح"
+    ? `📍 الموقع:\n${location}`
+    : "📍 الموقع غير متاح"
+}
+
+⏰ الوقت:
+${timestamp}
 `;
 
-    const response = await fetch(
-      `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+    const telegramResponse =
+      await fetch(
+        `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+          body: JSON.stringify({
+            chat_id:
+              process.env
+                .TELEGRAM_CHAT_ID,
+            text: telegramMessage,
+          }),
+        }
+      );
+
+    const telegramData =
+      await telegramResponse.json();
+
+    if (
+      !telegramResponse.ok ||
+      !telegramData.ok
+    ) {
+      console.error(
+        "Telegram Error:",
+        telegramData
+      );
+
+      return NextResponse.json(
+        {
+          error:
+            "Failed to send telegram message",
         },
-        body: JSON.stringify({
-          chat_id: process.env.TELEGRAM_CHAT_ID,
-          text: message,
-        }),
-      },
+        {
+          status: 500,
+        }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+    });
+  } catch (error) {
+    console.error(
+      "Emergency API Error:",
+      error
     );
 
-    const data = await response.json();
-
-    return NextResponse.json(data);
-  } catch (error) {
     return NextResponse.json(
-      { error: "Failed to send message" },
-      { status: 500 },
+      {
+        error:
+          "Failed to send emergency request",
+      },
+      {
+        status: 500,
+      }
     );
   }
 }
