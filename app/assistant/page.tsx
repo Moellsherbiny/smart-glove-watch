@@ -35,8 +35,29 @@ export default function AssistantPage() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<Message[]>([]);
 
+    const storage = {
+    get(key: string) {
+      try {
+        return localStorage.getItem(key);
+      } catch {
+        return null;
+      }
+    },
+
+    set(key: string, value: string) {
+      try {
+        localStorage.setItem(key, value);
+      } catch {}
+    },
+
+    remove(key: string) {
+      try {
+        localStorage.removeItem(key);
+      } catch {}
+    },
+  };
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
+    const saved = storage.get(STORAGE_KEY);
 
     if (saved) {
       setMessages(JSON.parse(saved));
@@ -53,7 +74,7 @@ export default function AssistantPage() {
 
   useEffect(() => {
     if (messages.length) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+      storage.set(STORAGE_KEY, JSON.stringify(messages));
     }
   }, [messages]);
 
@@ -123,7 +144,7 @@ useEffect(() => {
   prevLength.current = messages.length;
 }, [messages]);
   const clearChat = () => {
-    localStorage.removeItem(STORAGE_KEY);
+    storage.remove(STORAGE_KEY);
 
     setMessages([
       {
