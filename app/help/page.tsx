@@ -11,13 +11,16 @@ export default function EmergencyPage() {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState("");
 
-  const getLocation = async () => {
-    return new Promise<string | null>((resolve) => {
-      if (!navigator.geolocation) {
-        resolve(null);
-        return;
-      }
+const getLocation = async (): Promise<string | null> => {
+  try {
+    if (
+      typeof navigator === "undefined" ||
+      !navigator.geolocation
+    ) {
+      return null;
+    }
 
+    return await new Promise((resolve) => {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const url = `https://maps.google.com/?q=${position.coords.latitude},${position.coords.longitude}`;
@@ -27,17 +30,18 @@ export default function EmergencyPage() {
           resolve(url);
         },
         () => {
-          toast.warning("تعذر تحديد الموقع، سيتم إرسال الطلب بدون موقع");
-
           resolve(null);
         },
         {
           enableHighAccuracy: true,
           timeout: 10000,
-        },
+        }
       );
     });
-  };
+  } catch {
+    return null;
+  }
+};
 
   const sendEmergency = async () => {
     try {
