@@ -252,7 +252,7 @@ export default function HomePage() {
                 onClick={() => {
                   speak(gesture);
 
-                  sendToAppInventor("REPLAY");
+                  sendToAppInventor(`REPLAY_${Date.now()}`);
                 }}
               >
                 <Play className="w-4 h-4 ml-2" />
